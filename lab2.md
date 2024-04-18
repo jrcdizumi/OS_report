@@ -164,7 +164,7 @@ default_free_pages(struct Page *base, size_t n) {
 }
 ```
 结果：
-![alt text](image.png)
+![1](picture/2-1.png "2-1.png")
 
 ## 练习2
 get_pte函数找到一个虚地址对应的二级页表项的内核虚地址，如果此二级页表项不存在，则分配一个包含此项的二级页表。
@@ -203,9 +203,9 @@ KADDR(pa)：用于从页目录项（Page Directory Entry，PDE）中提取页表
 PTX(la):用于获取虚拟地址 la 对应的页表项的索引。
 PDE_ADDR：获取表项中的物理地址（即取前n位，在mmu.h中定义）
 ```
-![alt text](image-1.png)
+![2](picture/2-2.png "2-2.png")
 页表项和页目录项结构：
-![alt text](image-2.png)
+![3](picture/2-3.png "2-3.png")
 PTE_P           0x001                   // page table/directory entry flags bit : Present
 PTE_W           0x002                   // page table/directory entry flags bit : Writeable
 PTE_U           0x004                   // page table/directory entry flags bit : User can access
