@@ -210,3 +210,36 @@ PTE_P           0x001                   // page table/directory entry flags bit 
 PTE_W           0x002                   // page table/directory entry flags bit : Writeable
 PTE_U           0x004                   // page table/directory entry flags bit : User can access
 即上图中的后三位，我们根据PTE_P来判断是否存在。（上述这些在mmu.h中定义）
+
+## 练习3
+当释放一个包含某虚地址的物理内存页时，需要让对应此物理内存页的管理数据结构Page做相关的清除处理，使得此物理内存页成为空闲；另外还需把表示虚地址与物理地址对应关系的二级页表项清除。请仔细查看和理解page_remove_pte函数中的注释。为此，***需要补全在 kern/mm/pmm.c中的page_remove_pte函数。***
+以下是会用到的一些函数：
+```c
+Page *pte2page(*ptep):在pmm.h中定义，用于将页表项转为转为所指向的物理页对应的Page结构体指针
+page_ref_dec(struct Page *page):在pmm.h中定义,用于将物理页应用次数减1，返回值是最后的引用数
+free_page(page):在pmm.h中定义为：#define free_page(page) free_pages(page, 1)，free_pages在pmm.c中定义，所以就是用来释放一个物理页
+tlb_invalidate(pde_t *pgdir, uintptr_t la):pmm.c中定义，用于将tlb中某个虚拟地址对物理地址的映射失效
+```
+我们要补充page_remove_pte(pde_t *pgdir, uintptr_t la, pte_t *ptep)函数，主要流程如下：
+①获取ptep页表项所指向的物理页的Page指针(之前判断该页表项是否有效)
+②将管理该物理页的Page结构体中的引用次数减1
+③若引用次数为0，则将该物理页释放(调用free_page函数)
+④将该页表项的表项内容清空
+⑤通过tlb_invalidate使tlb中该虚拟地址的映射无效
+实现如下：
+```c
+static inline void page_remove_pte(pde_t *pgdir, uintptr_t la, pte_t *ptep) {
+if (*ptep & PTE_P) {  //页表项有效
+        struct Page *page = pte2page(*ptep); //找到管理对应的物理页的page
+        if (page_ref_dec(page) == 0) { //引用数减一 
+            free_page(page); //释放页
+        }
+        *ptep = 0; //目录项清0，该虚拟地址已经释放了
+        tlb_invalidate(pgdir, la); 
+        //刷新tlb
+    }
+}
+```
+最终结果：
+![4](picture/2-4.png "2-4.png")
+![5](picture/2-5.png "2-5.png")
