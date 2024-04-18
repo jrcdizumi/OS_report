@@ -14,7 +14,9 @@ struct Page {
 };
 ```
 
-该结构体对应每一个物理页，其中`ref`为该页引用次数，`flags`用于记录是否为空闲页（1空闲0已分配）。
+该结构体对应每一个物理页，其中`ref`为该页引用次数。
+`flags`用于记录是否为空闲页，`flags`目前用到了两个bit，bit 0（reserved位），1表示被保留，不能被分配。bit1，表示此页是否是free的，1为free可以被分配。
+
 `property`与`page_link`均只有空闲块中的第一页会设置，为该空闲块中物理页的个数（`property`）和一个双向链表（指向前一个空闲块的首页与下一个空闲块的首页）（`page_link`）
 ②
 ```c
@@ -41,9 +43,8 @@ static void default_init_memmap(struct Page *base, size_t n) {
     struct Page *p = base;
     // 将这个空闲块的每个页面初始化
     for (; p != base + n; p ++) {
-        // 每次循环首先检查p的PG_reserved位是否设置为1，表示空闲可分配
+        // 每次循环首先检查p的PG_reserved位是否设置为1，检查是否被保留的
         assert(PageReserved(p));
-        // 设置这一页的flag为0，表示这页空闲
         p->flags = 0;
         // 将这一页的ref设为0，即引用数置为0
         set_page_ref(p, 0);
@@ -113,7 +114,7 @@ default_free_pages(struct Page *base, size_t n) {
     struct Page *p = base;
     // 将这个释放块的每个页面初始化
     for (; p != base + n; p ++) {
-        assert(!PageReserved(p) && !PageProperty(p));
+        assert(!PageReserved(p));
         // 设置每一页的flags都为0，表示可以分配
         p->flags = 0;
         // 设置每一页的ref都为0，表示这页空闲
