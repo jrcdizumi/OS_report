@@ -2,7 +2,7 @@
 
 ***
 ## 练习1
-实现 first-fit 连续物理内存分配算法
+**实现 first-fit 连续物理内存分配算法**
 有两个较为重要的数据结构：
 ①
 ```c
@@ -14,8 +14,8 @@ struct Page {
 };
 ```
 
-该结构体对应每一个物理页，其中ref为该页引用次数，flags用于记录是否为空闲页（1空闲0已分配）。
-property与page_link均只有空闲块中的第一页会设置，为该空闲块中物理页的个数（property）和一个双向链表（指向前一个空闲块的首页与下一个空闲块的首页）（page_link）
+该结构体对应每一个物理页，其中`ref`为该页引用次数，`flags`用于记录是否为空闲页（1空闲0已分配）。
+`property`与`page_link`均只有空闲块中的第一页会设置，为该空闲块中物理页的个数（`property`）和一个双向链表（指向前一个空闲块的首页与下一个空闲块的首页）（`page_link`）
 ②
 ```c
 typedef struct {
@@ -23,17 +23,17 @@ typedef struct {
             unsigned int nr_free;   
 } free_area_t;
 ```
-链表指针指向空闲的块的首页，nr_free为空闲物理页总数量。
+链表指针指向空闲的块的首页，`nr_free`为空闲物理页总数量。
 本试验中主要修改以下**四个函数**：
-①该函数用于初始化free_area_t
+①该函数用于初始化`free_area_t`
 ```c
 default_init(void) {
     list_init(&free_list);
     nr_free = 0;
 }
 ```
-list_init定义在lish.h文件中，用于链表初始化（前后指针指向自己）
-nr_free=0将当前空闲物理页数置为0
+`list_init`定义在lish.h文件中，用于链表初始化（前后指针指向自己）
+`nr_free=0`将当前空闲物理页数置为0
 ②该函数用于初始化一段物理页为空闲块
 ```c
 static void default_init_memmap(struct Page *base, size_t n) {
@@ -167,8 +167,8 @@ default_free_pages(struct Page *base, size_t n) {
 ![1](picture/2-1.png "2-1.png")
 
 ## 练习2
-get_pte函数找到一个虚地址对应的二级页表项的内核虚地址，如果此二级页表项不存在，则分配一个包含此项的二级页表。
-本练习需要补全get_pte函数 in kern/mm/pmm.c。
+`get_pte`函数找到一个虚地址对应的二级页表项的内核虚地址，如果此二级页表项不存在，则分配一个包含此项的二级页表。
+本练习需要补全`get_pte`函数 in kern/mm/pmm.c。
 ```c
 pte_t *
 get_pte(pde_t *pgdir, uintptr_t la, bool create) {
@@ -206,13 +206,13 @@ PDE_ADDR：获取表项中的物理地址（即取前n位，在mmu.h中定义）
 ![2](picture/2-2.png "2-2.png")
 页表项和页目录项结构：
 ![3](picture/2-3.png "2-3.png")
-PTE_P           0x001                   // page table/directory entry flags bit : Present
-PTE_W           0x002                   // page table/directory entry flags bit : Writeable
-PTE_U           0x004                   // page table/directory entry flags bit : User can access
-即上图中的后三位，我们根据PTE_P来判断是否存在。（上述这些在mmu.h中定义）
+`PTE_P`           0x001                   // page table/directory entry flags bit : Present
+`PTE_W`          0x002                   // page table/directory entry flags bit : Writeable
+`PTE_U`           0x004                   // page table/directory entry flags bit : User can access
+即上图中的后三位，我们根据`PTE_P`来判断是否存在。（上述这些在mmu.h中定义）
 
 ## 练习3
-当释放一个包含某虚地址的物理内存页时，需要让对应此物理内存页的管理数据结构Page做相关的清除处理，使得此物理内存页成为空闲；另外还需把表示虚地址与物理地址对应关系的二级页表项清除。请仔细查看和理解page_remove_pte函数中的注释。为此，***需要补全在 kern/mm/pmm.c中的page_remove_pte函数。***
+当释放一个包含某虚地址的物理内存页时，需要让对应此物理内存页的管理数据结构Page做相关的清除处理，使得此物理内存页成为空闲；另外还需把表示虚地址与物理地址对应关系的二级页表项清除。请仔细查看和理解`page_remove_pte`函数中的注释。为此，***需要补全在 kern/mm/pmm.c中的page_remove_pte函数。***
 以下是会用到的一些函数：
 ```c
 Page *pte2page(*ptep):在pmm.h中定义，用于将页表项转为转为所指向的物理页对应的Page结构体指针
@@ -220,12 +220,12 @@ page_ref_dec(struct Page *page):在pmm.h中定义,用于将物理页应用次数
 free_page(page):在pmm.h中定义为：#define free_page(page) free_pages(page, 1)，free_pages在pmm.c中定义，所以就是用来释放一个物理页
 tlb_invalidate(pde_t *pgdir, uintptr_t la):pmm.c中定义，用于将tlb中某个虚拟地址对物理地址的映射失效
 ```
-我们要补充page_remove_pte(pde_t *pgdir, uintptr_t la, pte_t *ptep)函数，主要流程如下：
+我们要补充`page_remove_pte(pde_t *pgdir, uintptr_t la, pte_t *ptep)`函数，主要流程如下：
 ①获取ptep页表项所指向的物理页的Page指针(之前判断该页表项是否有效)
 ②将管理该物理页的Page结构体中的引用次数减1
-③若引用次数为0，则将该物理页释放(调用free_page函数)
+③若引用次数为0，则将该物理页释放(调用`free_page`函数)
 ④将该页表项的表项内容清空
-⑤通过tlb_invalidate使tlb中该虚拟地址的映射无效
+⑤通过`tlb_invalidate`使tlb中该虚拟地址的映射无效
 实现如下：
 ```c
 static inline void page_remove_pte(pde_t *pgdir, uintptr_t la, pte_t *ptep) {
